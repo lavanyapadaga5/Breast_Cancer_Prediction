@@ -2,11 +2,18 @@
 
 import pickle
 import streamlit as st
+import os
 from streamlit_option_menu import option_menu
 
+# Check if the model file exists
+model_file_path = 'breast_cancer_Pred.sav'
 
-# loading the saved model
-breast_cancer_model = pickle.load(open('breast_cancer_Pred.sav', 'rb'))
+# loading the saved model if the file exists
+if os.path.exists(model_file_path):
+    breast_cancer_model = pickle.load(open(model_file_path, 'rb'))
+else:
+    st.error(f"Model file '{model_file_path}' not found. Please check the file path.")
+    breast_cancer_model = None  # Set to None if file is not found
 
 # sidebar for navigation
 with st.sidebar:
@@ -53,19 +60,22 @@ if selected == 'Breast Cancer Prediction':
     
     # creating a button for Prediction
     if st.button('Breast Cancer Test Result'):
-        try:
-            cancer_prediction = breast_cancer_model.predict(
-                [[float(radius_mean), float(texture_mean), float(perimeter_mean), 
-                  float(area_mean), float(smoothness_mean), float(compactness_mean), 
-                  float(symmetry_mean), float(fractal_dimension_mean)]]
-            )
+        if breast_cancer_model is not None:  # Only proceed if model is loaded
+            try:
+                cancer_prediction = breast_cancer_model.predict(
+                    [[float(radius_mean), float(texture_mean), float(perimeter_mean), 
+                      float(area_mean), float(smoothness_mean), float(compactness_mean), 
+                      float(symmetry_mean), float(fractal_dimension_mean)]]
+                )
+                
+                if cancer_prediction[0] == 1:
+                    cancer_diagnosis = 'The person is likely to have breast cancer (Malignant)'
+                else:
+                    cancer_diagnosis = 'The person is unlikely to have breast cancer (Benign)'
             
-            if cancer_prediction[0] == 1:
-                cancer_diagnosis = 'The person is likely to have breast cancer (Malignant)'
-            else:
-                cancer_diagnosis = 'The person is unlikely to have breast cancer (Benign)'
-        
-        except ValueError:
-            cancer_diagnosis = 'Please provide valid numeric inputs for all fields.'
-        
+            except ValueError:
+                cancer_diagnosis = 'Please provide valid numeric inputs for all fields.'
+        else:
+            cancer_diagnosis = 'Model not loaded. Please check the file path.'
+
     st.success(cancer_diagnosis)
