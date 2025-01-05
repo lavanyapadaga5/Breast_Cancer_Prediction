@@ -1,0 +1,77 @@
+# Importing necessary libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report
+import tensorflow as tf
+
+# Load the dataset
+from sklearn.datasets import load_breast_cancer
+data = load_breast_cancer()
+
+# Convert to DataFrame
+df = pd.DataFrame(data=data.data, columns=data.feature_names)
+df['target'] = data.target
+
+# Separate features and target
+X = df.drop(columns='target')
+y = df['target']
+
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize the features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Build the neural network model
+model = tf.keras.Sequential([
+    tf.keras.layers.Dense(16, activation='relu', input_shape=(X_train.shape[1],)),
+    tf.keras.layers.Dense(8, activation='relu'),
+    tf.keras.layers.Dense(1, activation='sigmoid')  # Output layer for binary classification
+])
+
+# Compile the model
+model.compile(optimizer='adam',
+              loss='binary_crossentropy',
+              metrics=['accuracy'])
+
+# Train the model
+history = model.fit(X_train, y_train, epochs=50, batch_size=16, validation_split=0.2, verbose=1)
+
+# Evaluate the model
+test_loss, test_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Test Accuracy: {test_accuracy * 100:.2f}%")
+
+# Make predictions on the test set
+y_pred = (model.predict(X_test) > 0.5).astype(int)
+
+# Evaluate predictions
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+# Save the model
+model.save("breast_cancer_model.h5")
+print("Model saved as 'breast_cancer_model.h5'")
+
+# Predict whether a new patient has breast cancer
+def predict_breast_cancer(features):
+    """
+    Function to predict whether a patient has breast cancer.
+    Input: A list or array of 30 features (standardized).
+    Output: Diagnosis result (Benign or Malignant).
+    """
+    features = np.array(features).reshape(1, -1)  # Reshape to match input shape
+    features = scaler.transform(features)  # Scale the input features
+    prediction = model.predict(features)
+    
+    if prediction[0][0] > 0.5:
+        return "The patient has breast cancer (Malignant)."
+    else:
+        return "The patient does not have breast cancer (Benign)."
+
+# Example patient input (replace with actual values)
+example_patient = X_test[0]  # Taking the first test sample as an example
+diagnosis = predict_breast_cancer(example_patient)
+print("\nDiagnosis for Example Patient:\n", diagnosis)
